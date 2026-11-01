@@ -1,0 +1,51 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Virtual environments / secrets ---
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# --- PyCharm / JetBrains ---
+.idea/
+*.iml
+*.iws
+out/
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+
+# --- Project: models, datasets, training output ---
+backend/weights/*.pt
+backend/weights/*.onnx
+*.pt
+*.onnx
+runs/
+datasets/
+data/
+
+# --- Jupyter / Colab ---
+.ipynb_checkpoints/
