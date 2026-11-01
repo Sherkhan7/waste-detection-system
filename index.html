@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Waste Detector – Info</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2230; --muted:#667085; --line:#e4e7ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12151c; --card:#1b2029; --text:#e8ebf0; --muted:#98a2b3; --line:#2a3140; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1000px; margin:0 auto; padding:16px; display:grid; gap:16px; grid-template-columns:1.4fr 1fr; }
+  @media (max-width:760px) { main { grid-template-columns:1fr; } }
+  header { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; }
+  h1 { font-size:20px; margin:0; }
+  a { color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .stage { position:relative; } video,canvas { width:100%; border-radius:8px; display:block; }
+  canvas { position:absolute; inset:0; pointer-events:none; }
+  button { padding:10px 16px; border:0; border-radius:8px; background:#2f7de1; color:#fff; font-size:15px; cursor:pointer; margin-top:10px; }
+  .item { border-left:6px solid var(--c); padding:8px 12px; margin-bottom:10px; background:var(--bg); border-radius:6px; }
+  .item b { text-transform:capitalize; } .muted { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Waste Detector</h1><a href="/static/gamified/index.html">Switch to game version →</a></header>
+  <section class="card">
+    <div class="stage"><video id="v" playsinline muted></video><canvas id="o"></canvas></div>
+    <button id="btn">Start camera</button>
+  </section>
+  <section class="card"><h2 style="margin-top:0;font-size:16px">Where does it go?</h2><div id="out" class="muted">Point the camera at an item.</div></section>
+</main>
+<script type="module">
+import { WasteClient } from "/static/common.js";
+const out = document.getElementById("out");
+const client = new WasteClient({
+  video: document.getElementById("v"), overlay: document.getElementById("o"),
+  onDetections(ds) {
+    if (!ds.length) { out.textContent = "No waste item detected."; return; }
+    out.innerHTML = ds.map(d => `
+      <div class="item" style="--c:${d.bin.color}">
+        <b>${d.label}</b> → <b>${d.bin.name}</b>
+        <div class="muted">${d.bin.accepts} · ${(d.confidence*100)|0}% confident</div>
+        <div style="margin-top:4px">${d.fact}</div>
+      </div>`).join("");
+  },
+});
+document.getElementById("btn").onclick = () => client.start().catch(e => out.textContent = "Camera error: " + e.message);
+</script>
+</body>
+</html>
