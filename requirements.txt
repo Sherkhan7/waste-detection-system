@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+python-multipart
+opencv-python-headless
+numpy
+ultralytics  # only needed once you have weights/best.pt

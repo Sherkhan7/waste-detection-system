@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sort It! – Waste Game</title>
+<style>
+  :root { --bg:#eaf7ee; --card:#fff; --text:#173022; --accent:#2e9e5b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10201a; --card:#18302a; --text:#e6f5ea; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Trebuchet MS",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:760px; margin:0 auto; padding:14px; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  h1 { margin:0; font-size:26px; } .score { font-size:20px; font-weight:bold; }
+  .stage { position:relative; border-radius:16px; overflow:hidden; border:4px solid var(--accent); background:#000; }
+  video,canvas { width:100%; display:block; } canvas { position:absolute; inset:0; pointer-events:none; }
+  #prompt { margin:12px 0; padding:14px; border-radius:14px; background:var(--card); text-align:center; font-size:18px; min-height:70px; }
+  .bins { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .bin { background:var(--c); color:#111; border-radius:10px; padding:10px 4px; text-align:center; font-size:12px; font-weight:bold; transition:transform .2s; }
+  .bin.hit { transform:scale(1.18); box-shadow:0 0 0 4px #fff, 0 0 18px var(--c); }
+  button { width:100%; padding:14px; margin-top:12px; border:0; border-radius:14px; background:var(--accent); color:#fff; font-size:18px; font-weight:bold; cursor:pointer; }
+  .pop { animation:pop .5s; } @keyframes pop { 0%{transform:scale(.8)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+  a { font-size:13px; color:inherit; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>♻️ Sort It!</h1><div class="score">⭐ <span id="score">0</span> &nbsp;🔥 <span id="streak">0</span></div></header>
+  <div class="stage"><video id="v" playsinline muted></video><canvas id="o"></canvas></div>
+  <div id="prompt">Show me something you want to throw away!</div>
+  <div class="bins" id="bins"></div>
+  <button id="btn">Start playing</button>
+  <p><a href="/static/informational/index.html">Switch to info version →</a></p>
+</main>
+<script type="module">
+import { WasteClient } from "/static/common.js";
+const $ = (id) => document.getElementById(id);
+let score = 0, streak = 0, stable = { cls: null, n: 0 }, lastAwarded = 0;
+
+// Build the bin row from the API so colours/names stay in sync with the backend.
+const binEls = {};
+fetch("/api/bins").then(r => r.json()).then(bins => {
+  const seen = new Set();
+  for (const [cls, b] of Object.entries(bins)) {
+    if (seen.has(b.name)) continue; seen.add(b.name);
+    const el = document.createElement("div");
+    el.className = "bin"; el.style.setProperty("--c", b.color);
+    el.textContent = `${b.name}\n${b.accepts}`; el.style.whiteSpace = "pre-line";
+    $("bins").appendChild(el); binEls[b.name] = el;
+  }
+});
+
+const cheers = ["Awesome!", "Eco hero!", "Nailed it!", "Planet says thanks!"];
+function onDetections(ds) {
+  const d = ds[0];
+  Object.values(binEls).forEach(e => e.classList.remove("hit"));
+  if (!d) { stable = { cls: null, n: 0 }; $("prompt").textContent = "Show me something you want to throw away!"; return; }
+  binEls[d.bin.name]?.classList.add("hit");
+  // Require the same class for ~4 consecutive frames (and a 3s cooldown) before awarding points.
+  stable = stable.cls === d.waste_class ? { cls: d.waste_class, n: stable.n + 1 } : { cls: d.waste_class, n: 1 };
+  const p = $("prompt");
+  p.innerHTML = `I see <b>${d.label}</b>!<br>Put it in the <b style="color:${d.bin.color}">${d.bin.name}</b>.<br><small>${d.fact}</small>`;
+  if (stable.n >= 4 && Date.now() - lastAwarded > 3000) {
+    lastAwarded = Date.now(); score += 10; streak += 1;
+    $("score").textContent = score; $("streak").textContent = streak;
+    p.classList.remove("pop"); void p.offsetWidth; p.classList.add("pop");
+    p.insertAdjacentHTML("afterbegin", `<div>🎉 ${cheers[streak % cheers.length]} +10</div>`);
+  }
+}
+
+const client = new WasteClient({ video: $("v"), overlay: $("o"), onDetections });
+$("btn").onclick = () => client.start().then(() => $("btn").style.display = "none")
+  .catch(e => $("prompt").textContent = "Camera error: " + e.message);
+</script>
+</body>
+</html>
